@@ -24,47 +24,110 @@ from check_tasks import get_all_tasks_with_details
 
 OPEN_HELPER_SCRIPT = Path(__file__).parent / "open_task_helper.sh"
 
-# --- UI IMPROVEMENT: Updated stylesheet for a cleaner splitter handle ---
 MATERIAL_STYLE_SHEET = """
 QWidget {
-    background-color: #121212; color: #E0E0E0; font-family: "JetBrainsMono Nerd Font"; font-size: 10pt;
+    background-color: #121212;
+    color: #E0E0E0;
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 10pt;
 }
+
+/* --- TABLES --- */
 QTableView {
-    background-color: #1E1E1E; border: 1px solid #333333; gridline-color: #333333;
-    border-radius: 4px; alternate-background-color: #262626;
+    background-color: #1E1E1E;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    gridline-color: #2A2A2A;
+    alternate-background-color: #252525;
+    selection-background-color: #3F51B5;
+    selection-color: #FFFFFF;
 }
-QTableView::item { padding: 6px; border-radius: 2px; }
-QTableView::item:selected { background-color: #3700B3; color: #FFFFFF; }
-QTableView::item:hover:!selected { background-color: #2D2D2D; }
+QTableView::item {
+    padding: 6px;
+    border-radius: 4px;
+}
+QTableView::item:selected {
+    background-color: #3F51B5;
+    color: #FFFFFF;
+}
+QTableView::item:hover:!selected {
+    background-color: #2C2C2C;
+}
 QHeaderView::section {
-    background-color: #2C2C2C; padding: 6px; border: none;
-    border-bottom: 1px solid #333333; color: #BB86FC; font-weight: bold;
+    background-color: #2A2A2A;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid #333333;
+    color: #BB86FC;
+    font-weight: bold;
+    border-radius: 4px 4px 0 0;
 }
-QLineEdit {
-    padding: 10px; border: 1px solid #333333; border-radius: 4px;
-    background-color: #2C2C2C; selection-background-color: #3700B3;
+
+/* --- TEXT INPUTS --- */
+QLineEdit, QTextEdit {
+    background-color: #2A2A2A;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 8px;
+    selection-background-color: #3F51B5;
 }
-QLineEdit:focus { border: 1px solid #BB86FC; }
+QLineEdit:focus, QTextEdit:focus {
+    border: 1px solid #BB86FC;
+}
+
+/* --- BUTTONS --- */
 QPushButton {
-    background-color: #3700B3; color: white; border: none; border-radius: 4px;
-    padding: 8px 16px; font-weight: bold;
+    background-color: #3F51B5;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 18px;
+    font-weight: 500;
 }
-QPushButton:hover { background-color: #4B11D0; }
-QPushButton:pressed { background-color: #2E0091; }
-QLabel { color: #BB86FC; }
-QTextEdit {
-    background-color: #1E1E1E; border: 1px solid #333333; border-radius: 4px; padding: 6px;
+QPushButton:hover {
+    background-color: #5C6BC0;
 }
+QPushButton:pressed {
+    background-color: #303F9F;
+}
+
+/* --- LABELS --- */
+QLabel {
+    color: #E0E0E0;
+    font-weight: 500;
+}
+
+/* --- SCROLLBARS --- */
 QScrollBar:vertical {
-    border: none; background: #1E1E1E; width: 12px; margin: 0px;
+    border: none;
+    background: #1E1E1E;
+    width: 12px;
+    margin: 0px;
 }
-QScrollBar::handle:vertical { background: #424242; min-height: 20px; border-radius: 6px; }
-QScrollBar::handle:vertical:hover { background: #555555; }
-QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+QScrollBar::handle:vertical {
+    background: #3A3A3A;
+    min-height: 20px;
+    border-radius: 6px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #555555;
+}
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* --- SPLITTER --- */
+QSplitter::handle {
+    background-color: #2A2A2A;
+}
 QSplitter::handle:vertical {
-    background-color: #333333;
-    height: 1px;
-    margin: 4px 0px;
+    height: 2px;
+    margin: 6px 0;
+}
+QSplitter::handle:horizontal {
+    width: 2px;
+    margin: 0 6px;
 }
 """
 
