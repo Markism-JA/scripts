@@ -286,11 +286,60 @@ def handle_complete():
     handle_refresh()
 
 
+def get_all_tasks_with_details():
+    """Gets all rated tasks and enriches them with full details."""
+    tasks = get_all_rated_tasks()  # This is your existing function
+    sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
+
+    metadata = load_metadata()
+    detailed_tasks = []
+    for task in sorted_tasks:
+        task_data = metadata.get(task["rel_path"], {})
+        difficulty = task_data.get("difficulty", "N/A")
+        due_date = task_data.get("due_date", "N/A")
+        if due_date is None:
+            due_date = "N/A"
+
+        detailed_tasks.append(
+            {
+                "priority": task["priority"],
+                "difficulty": difficulty,
+                "due_date": due_date,
+                "subject": task["subject"],
+                "name": task["path"].name,
+                "full_path": str(task["path"]),
+            }
+        )
+    return detailed_tasks
+
+
+def handle_export():
+    """Exports all rated tasks as Tab-Separated Values (TSV)."""
+    tasks = get_all_rated_tasks()
+    sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
+
+    for task in sorted_tasks:
+        metadata = load_metadata()
+        task_data = metadata.get(task["rel_path"], {})
+        difficulty = task_data.get("difficulty", "N/A")
+        due_date = task_data.get("due_date", "N/A")
+        if due_date is None:
+            due_date = "N/A"  # Ensure it's not Python's None
+
+        print(
+            f"{task['priority']}\t"
+            f"{difficulty}\t"
+            f"{due_date}\t"
+            f"{task['subject']}\t"
+            f"{task['path'].name}\t"
+            f"{task['path']}"
+        )
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="A CLI tool to manage academic tasks with a central metadata file."
     )
-    # Add arguments
     parser.add_argument(
         "--init", action="store_true", help="Initialize the directory structure."
     )
@@ -303,6 +352,9 @@ def main():
     parser.add_argument(
         "--complete", "--done", action="store_true", help="Mark a task as complete."
     )
+    parser.add_argument(
+        "--export", action="store_true", help="Export all task data in TSV format."
+    )  # <-- ADD THIS LINE
 
     args = parser.parse_args()
 
@@ -313,6 +365,8 @@ def main():
             handle_refresh()
         elif args.complete:
             handle_complete()
+        elif args.export:
+            handle_export()  # <-- ADD THIS LINE
         else:
             handle_check()  # Default action is --check
     except KeyboardInterrupt:
