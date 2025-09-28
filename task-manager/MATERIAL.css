@@ -1,0 +1,99 @@
+/* --- GLOBAL --- */
+QWidget {
+    background-color: #1E1E1E;
+    /* dark base */
+    color: #EDEDED;
+    font-family: "JetBrainsMono Nerd Font", "Cantarell", sans-serif;
+    font-size: 11pt;
+}
+
+/* --- TEXT INPUTS --- */
+QLineEdit,
+QTextEdit {
+    background-color: #2C2C2C;
+    border: 1px solid #3A3A3A;
+    border-radius: 6px;
+    padding: 10px;
+    font-size: 11pt;
+    selection-background-color: #4A6CF7;
+    selection-color: #FFFFFF;
+}
+
+QLineEdit:focus,
+QTextEdit:focus {
+    border: 1px solid #82A0FF;
+    background-color: #303030;
+    /* subtle highlight */
+}
+
+/* --- BUTTONS --- */
+QPushButton {
+    background-color: #4A6CF7;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 22px;
+    font-weight: 600;
+    font-size: 11pt;
+    transition: background-color 0.2s ease;
+}
+
+QPushButton:hover {
+    background-color: #5C7CFA;
+    /* lighter hover */
+}
+
+QPushButton:pressed {
+    background-color: #3B5BDB;
+    /* darker pressed */
+}
+
+QPushButton:disabled {
+    background-color: #3A3A3A;
+    color: #777777;
+}
+
+/* --- LABELS --- */
+QLabel {
+    color: #EDEDED;
+    font-weight: 500;
+    font-size: 11pt;
+}
+
+/* --- SCROLLBARS --- */
+QScrollBar:vertical {
+    border: none;
+    background: #1E1E1E;
+    width: 14px;
+    margin: 0px;
+}
+
+QScrollBar::handle:vertical {
+    background: #4A4A4A;
+    min-height: 24px;
+    border-radius: 7px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #5C5C5C;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* --- SPLITTER --- */
+QSplitter::handle {
+    background-color: #2F2F2F;
+}
+
+QSplitter::handle:vertical {
+    height: 3px;
+    margin: 6px 0;
+}
+
+QSplitter::handle:horizontal {
+    width: 3px;
+    margin: 0 6px;
+}
