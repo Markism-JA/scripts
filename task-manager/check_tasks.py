@@ -91,7 +91,7 @@ def get_all_rated_tasks():
             full_path = SCHOOL_FILES_DIR / rel_path_str
             if not full_path.exists():
                 print(
-                    f"Warning: Task '{rel_path_str}' not found on disk. Consider removing it from metadata."
+                    f"Warning: Task '{rel_path_str}' not found on disk. It will be ignored."
                 )
                 continue
 
@@ -111,6 +111,8 @@ def get_all_rated_tasks():
                     "rel_path": rel_path_str,
                     "subject": full_path.parent.parent.name,
                     "priority": priority,
+                    "difficulty": difficulty,
+                    "due_date": due_date_obj,
                 }
             )
         except (KeyError, ValueError) as e:
@@ -149,23 +151,28 @@ def handle_refresh():
     print(f"Dashboard refreshed with {len(sorted_tasks)} tasks.")
 
 
-def get_date_input(prompt):
+def get_date_input(prompt, current=None):
     """Prompts user for a date and validates the format."""
     while True:
         date_str = input(prompt).strip()
         if not date_str:
-            return None
+            return current
         try:
             return datetime.strptime(date_str, "%Y-%m-%d").date()
         except ValueError:
-            print("  Invalid format. Please use YYYY-MM-DD or press Enter for none.")
+            print(
+                "  Invalid format. Please use YYYY-MM-DD or press Enter to keep current value."
+            )
 
 
-def get_validated_input(prompt, min_val=1, max_val=5):
+def get_validated_input(prompt, current=None, min_val=1, max_val=5):
     """Prompts user for an integer and validates it."""
     while True:
+        value_str = input(prompt).strip()
+        if not value_str:
+            return current
         try:
-            value = int(input(prompt))
+            value = int(value_str)
             if min_val <= value <= max_val:
                 return value
             else:
@@ -211,7 +218,7 @@ def handle_check():
         open_choice = input("Open to review? [y/N]: ").lower().strip()
         if open_choice == "y":
             try:
-                subprocess.run(["xdg-open", item_path])
+                subprocess.run(["xdg-open", str(item_path)])
             except Exception as e:
                 print(f"Error: Could not open file '{item_path}'. {e}")
 
@@ -234,7 +241,7 @@ def handle_check():
 
 
 def handle_complete():
-    """Moves a completed task and removes its metadata entry."""
+    """Moves completed tasks and removes their metadata entries."""
     tasks = get_all_rated_tasks()
     sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
     if not sorted_tasks:
@@ -243,60 +250,156 @@ def handle_complete():
 
     print("Current tasks:")
     for i, task in enumerate(sorted_tasks, 1):
-        print(f"  {i:02d}: [{task['subject']}] {task['path'].name}")
+        due_date_str = (
+            task["due_date"].strftime("%Y-%m-%d") if task["due_date"] else "N/A"
+        )
+        print(
+            f"  {i:02d}: [{task['subject']}] {task['path'].name} (Due: {due_date_str}, Diff: {task['difficulty']})"
+        )
+
+    tasks_to_complete = []
+    while True:
+        choice_str = input(
+            "\nEnter number(s) of tasks to complete (e.g., '1 4 5'), or 'q' to quit: "
+        ).strip()
+        if choice_str.lower() == "q":
+            return
+
+        choices = choice_str.split()
+        if not choices:
+            continue
+
+        selected_indices = []
+        valid_input = True
+        for choice in choices:
+            try:
+                index = int(choice) - 1
+                if 0 <= index < len(sorted_tasks):
+                    selected_indices.append(index)
+                else:
+                    print(f"Error: Task number '{choice}' is out of range.")
+                    valid_input = False
+                    break
+            except ValueError:
+                print(f"Error: '{choice}' is not a valid number.")
+                valid_input = False
+                break
+
+        if valid_input:
+            tasks_to_complete = [sorted_tasks[i] for i in selected_indices]
+            break
+
+    if not tasks_to_complete:
+        print("No valid tasks selected.")
+        return
+
+    metadata = load_metadata()
+    for task in tasks_to_complete:
+        item_path = task["path"]
+        completed_path = item_path.parent.parent / COMPLETED_DIR_NAME
+        try:
+            item_path.rename(completed_path / item_path.name)
+            print(f"Moved '{item_path.name}' to completed tasks.")
+
+            if task["rel_path"] in metadata:
+                del metadata[task["rel_path"]]
+                print(f"  - Removed '{item_path.name}' from metadata.")
+
+        except IOError as e:
+            print(f"Error moving file '{item_path.name}': {e}")
+            continue
+
+    save_metadata(metadata)
+    print("\nUpdating dashboard...")
+    handle_refresh()
+
+
+def handle_modify():
+    """Allows modification of an existing task's due date and difficulty."""
+    tasks = get_all_rated_tasks()
+    sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
+    if not sorted_tasks:
+        print("No tasks to modify.")
+        return
+
+    print("Current tasks:")
+    for i, task in enumerate(sorted_tasks, 1):
+        due_date_str = (
+            task["due_date"].strftime("%Y-%m-%d") if task["due_date"] else "N/A"
+        )
+        print(
+            f"  {i:02d}: [{task['subject']}] {task['path'].name} (Due: {due_date_str}, Diff: {task['difficulty']})"
+        )
 
     while True:
         choice = input(
-            "\nEnter the number of the task to complete (or 'q' to quit): "
+            "\nEnter the number of the task to modify (or 'q' to quit): "
         ).strip()
         if choice.lower() == "q":
             return
         try:
-            task_to_complete = sorted_tasks[int(choice) - 1]
+            task_to_modify = sorted_tasks[int(choice) - 1]
             break
         except (ValueError, IndexError):
             print("Invalid number. Please try again.")
 
-    item_path = task_to_complete["path"]
-    completed_path = item_path.parent.parent / COMPLETED_DIR_NAME
-    try:
-        item_path.rename(completed_path / item_path.name)
-        print(f"\nMoved '{item_path.name}' to completed tasks.")
-    except IOError as e:
-        print(f"Error moving file: {e}")
-        return
+    print(f"\nModifying task: {task_to_modify['path'].name}")
+
+    current_due_date = task_to_modify["due_date"]
+    current_difficulty = task_to_modify["difficulty"]
+
+    due_date_prompt = f"Enter new Due Date (YYYY-MM-DD) [current: {current_due_date.strftime('%Y-%m-%d') if current_due_date else 'None'}]: "
+    new_due_date = get_date_input(due_date_prompt, current=current_due_date)
+
+    difficulty_prompt = f"Enter new difficulty (1-5) [current: {current_difficulty}]: "
+    new_difficulty = get_validated_input(difficulty_prompt, current=current_difficulty)
 
     metadata = load_metadata()
-    if task_to_complete["rel_path"] in metadata:
-        del metadata[task_to_complete["rel_path"]]
+    if task_to_modify["rel_path"] in metadata:
+        metadata[task_to_modify["rel_path"]]["due_date"] = (
+            new_due_date.strftime("%Y-%m-%d") if new_due_date else None
+        )
+        metadata[task_to_modify["rel_path"]]["difficulty"] = new_difficulty
         save_metadata(metadata)
-        print("Removed task from metadata.")
+        print("\nTask metadata updated successfully.")
+    else:
+        print("Error: Could not find task in metadata to update.")
+        return
 
     handle_refresh()
 
 
-def get_all_tasks_with_details():
-    """Gets all rated tasks and enriches them with full details."""
-    tasks = get_all_rated_tasks()  # This is your existing function
-    sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
-
+def modify_task_data(rel_path, new_due_date, new_difficulty):
+    """Programmatically modifies the metadata for a single task."""
     metadata = load_metadata()
+    if rel_path in metadata:
+        metadata[rel_path]["due_date"] = new_due_date
+        metadata[rel_path]["difficulty"] = new_difficulty
+        save_metadata(metadata)
+        print(f"Programmatically updated metadata for '{rel_path}'.")
+        return True
+    else:
+        print(f"Error: Could not find task with rel_path '{rel_path}' in metadata.")
+        return False
+
+
+def get_all_tasks_with_details():
+    """Gets all rated tasks and enriches them with full details for the GUI."""
+    tasks = get_all_rated_tasks()
+    sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
     detailed_tasks = []
     for task in sorted_tasks:
-        task_data = metadata.get(task["rel_path"], {})
-        difficulty = task_data.get("difficulty", "N/A")
-        due_date = task_data.get("due_date", "N/A")
-        if due_date is None:
-            due_date = "N/A"
-
         detailed_tasks.append(
             {
                 "priority": task["priority"],
-                "difficulty": difficulty,
-                "due_date": due_date,
+                "difficulty": task["difficulty"],
+                "due_date": task["due_date"].strftime("%Y-%m-%d")
+                if task["due_date"]
+                else "N/A",
                 "subject": task["subject"],
                 "name": task["path"].name,
                 "full_path": str(task["path"]),
+                "rel_path": task["rel_path"],
             }
         )
     return detailed_tasks
@@ -307,13 +410,12 @@ def handle_export():
     tasks = get_all_rated_tasks()
     sorted_tasks = sorted(tasks, key=lambda x: x["priority"], reverse=True)
 
+    print("Priority\tDifficulty\tDue Date\tSubject\tName\tFull Path")
+
     for task in sorted_tasks:
-        metadata = load_metadata()
-        task_data = metadata.get(task["rel_path"], {})
-        difficulty = task_data.get("difficulty", "N/A")
-        due_date = task_data.get("due_date", "N/A")
-        if due_date is None:
-            due_date = "N/A"
+        difficulty = task.get("difficulty", "N/A")
+        due_date_obj = task.get("due_date")
+        due_date = due_date_obj.strftime("%Y-%m-%d") if due_date_obj else "N/A"
 
         print(
             f"{task['priority']}\t"
@@ -339,25 +441,42 @@ def main():
         "-r", "--refresh", action="store_true", help="Refresh the dashboard."
     )
     parser.add_argument(
-        "--complete", "--done", action="store_true", help="Mark a task as complete."
+        "--complete",
+        "--done",
+        action="store_true",
+        help="Mark one or more tasks as complete.",
+    )
+    parser.add_argument(
+        "-m",
+        "--modify",
+        action="store_true",
+        help="Modify the data of an existing task.",
     )
     parser.add_argument(
         "--export", action="store_true", help="Export all task data in TSV format."
     )
 
+    parser.set_defaults(func=handle_check)
+
     args = parser.parse_args()
 
+    action_map = {
+        "init": handle_init,
+        "refresh": handle_refresh,
+        "complete": handle_complete,
+        "modify": handle_modify,
+        "export": handle_export,
+        "check": handle_check,
+    }
+
+    action_to_run = handle_check
+    for action, func in action_map.items():
+        if getattr(args, action, False):
+            action_to_run = func
+            break
+
     try:
-        if args.init:
-            handle_init()
-        elif args.refresh:
-            handle_refresh()
-        elif args.complete:
-            handle_complete()
-        elif args.export:
-            handle_export()
-        else:
-            handle_check()
+        action_to_run()
     except KeyboardInterrupt:
         print("\nOperation cancelled by user. Exiting.")
         sys.exit(0)
